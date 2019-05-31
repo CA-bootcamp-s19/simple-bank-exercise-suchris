@@ -26,14 +26,14 @@ contract SimpleBank {
     //
     
     /* Add an argument for this event, an accountAddress */
-    event LogEnrolled(address indexed sender);
+    event LogEnrolled(address account);
 
     /* Add 2 arguments for this event, an accountAddress and an amount */
-    event LogDepositMade(address indexed sender, uint indexed amount);
+    event LogDepositMade(address account, uint amount);
 
     /* Create an event called LogWithdrawal */
     /* Add 3 arguments for this event, an accountAddress, withdrawAmount and a newBalance */
-    event LogWithdrawal(address indexed sender, uint indexed amount);
+    event LogWithdrawal(address account, uint amount);
 
     //
     // Functions
@@ -49,20 +49,20 @@ contract SimpleBank {
     /// @return The balance of the user
     // A SPECIAL KEYWORD prevents function from editing state variables;
     // allows function to run locally/off blockchain
-    function getBalance(address account) public view returns (uint) {
+    function getBalance() public view returns (uint) {
         /* Get the balance of the sender of this transaction */
-        return balances[account];
+        return balances[msg.sender];
     }
 
     /// @notice Enroll a customer with the bank
     /// @return The users enrolled status
     // Emit the appropriate event
-    function enroll(address account) public returns (bool isEnrolled) {
-        if (msg.sender == owner && owner != account) {
-            enrolled[account] = true;
+    function enroll() public returns (bool isEnrolled) {
+        if (owner != msg.sender) {
+            enrolled[msg.sender] = true;
         }
-        isEnrolled = enrolled[account];
-        emit LogEnrolled(account);
+        isEnrolled = enrolled[msg.sender];
+        emit LogEnrolled(msg.sender);
     }
 
     /// @notice Deposit ether into bank
@@ -71,12 +71,14 @@ contract SimpleBank {
     // Use the appropriate global variables to get the transaction sender and value
     // Emit the appropriate event
     // Users should be enrolled before they can make deposits
-    function deposit(address account, uint depositAmount) public returns (uint currentBalance) {
+    function deposit(uint depositAmount) public returns (uint currentBalance) {
         /* Add the amount to the user's balance, call the event associated with a deposit,
           then return the balance of the user */
-        balances[account] += depositAmount;
-        currentBalance = balances[account];
-        emit LogDepositMade(account, depositAmount);
+        if (enrolled[msg.sender] == true) {
+            balances[msg.sender] += depositAmount;
+        }
+        currentBalance = balances[msg.sender];
+        emit LogDepositMade(msg.sender, depositAmount);
     }
 
     /// @notice Withdraw ether from bank
@@ -84,16 +86,16 @@ contract SimpleBank {
     /// @param withdrawAmount amount you want to withdraw
     /// @return The balance remaining for the user
     // Emit the appropriate event
-    function withdraw(address account, uint withdrawAmount) public returns (uint currentBalance) {
+    function withdraw(uint withdrawAmount) public returns (uint currentBalance) {
         /* If the sender's balance is at least the amount they want to withdraw,
            Subtract the amount from the sender's balance, and try to send that amount of ether
            to the user attempting to withdraw.
            return the user's balance.*/
-        if (balances[account] >= withdrawAmount) {
-            balances[account] -= withdrawAmount;
+        if (enrolled[msg.sender] && balances[msg.sender] >= withdrawAmount) {
+            balances[msg.sender] -= withdrawAmount;
         }
-        currentBalance = balances[account];
-        emit LogWithdrawal(account, withdrawAmount);
+        currentBalance = balances[msg.sender];
+        emit LogWithdrawal(msg.sender, withdrawAmount);
     }
 
     // Fallback function - Called if other functions don't match call or
